@@ -208,7 +208,24 @@
       }
       
       // Parse M3U8 content and find the specific channel
-      const API_URL = "https://allrounderid2.pages.dev/api/jiotv2.json";
+const API_URL = "https://allrounderid2.pages.dev/api/jiotv2.json";
+
+// Clean stream URL (remove unwanted cookie parameter)
+function cleanStreamUrl(url) {
+  try {
+    const urlObj = new URL(url);
+
+    // remove xxx cookie parameter
+    if (urlObj.searchParams.has("xxx")) {
+  urlObj.searchParams.delete("xxx");
+}
+
+    return urlObj.toString();
+  } catch (e) {
+    console.error("URL cleaning failed:", e);
+    return url;
+  }
+}
 
 async function fetchChannel() {
 
@@ -237,7 +254,7 @@ async function fetchChannel() {
       id: channel.channel_id,
       name: channel.channel_name,
       logo: channel.channel_logo,
-      streamUrl: channel.channel_url,
+      streamUrl: cleanStreamUrl(channel.channel_url),
       keyId: channel.keyId,
       key: channel.key
     };
@@ -280,18 +297,6 @@ async function fetchChannel() {
           }
         });
 
-        // Configure DRM from the channel data
-        const keyId = channel.keyId;
-const keyValue = channel.key;
-        const drmConfig = {
-          clearKeys: {
-            [keyId]: keyValue
-          }
-        };
-
-        // Use the cookie from the channel data
-        let cookieHeader = channel.cookie;
-
         player.configure({
   drm: {
     clearKeys: {
@@ -300,30 +305,25 @@ const keyValue = channel.key;
   },
 
   streaming: {
-    bufferingGoal: 15,
+    bufferingGoal: 30,
     rebufferingGoal: 2,
-    lowLatencyMode: true
+    lowLatencyMode: true,
+
+    retryParameters: {
+      maxAttempts: 3,
+      baseDelay: 1000,
+      backoffFactor: 2,
+      fuzzFactor: 0.5
+    }
   }
 });
 
-        // Register request filter and append cookieHeader to manifest/segment requests if needed
-        player.getNetworkingEngine().registerRequestFilter((type, request) => {
-          request.headers['Referer'] = 'https://www.jiotv.com/';
-          request.headers['User-Agent'] = "plaYtv/7.1.5 (Linux;Android 13) ExoPlayerLib/2.11.6";
-          if (cookieHeader) {
-            request.headers['Cookie'] = cookieHeader;
+player.getNetworkingEngine().registerRequestFilter((type, request) => {
+  request.headers['Referer'] = 'https://www.jiotv.com/';
+  request.headers['User-Agent'] = "plaYtv/7.1.5 (Linux;Android 13) ExoPlayerLib/2.11.6";
+});
 
-            if (
-              (type === shaka.net.NetworkingEngine.RequestType.MANIFEST ||
-                type === shaka.net.NetworkingEngine.RequestType.SEGMENT) &&
-              request.uris[0] && !request.uris[0].includes('__hdnea__=')
-            ) {
-              const separator = request.uris[0].includes('?') ? '&' : '?';
-              request.uris[0] += separator + cookieHeader;
-            }
-          }
-        });
-
+            
         const enableAutoplay = () => {
           video.setAttribute('autoplay', '');
           video.setAttribute('playsinline', '');
