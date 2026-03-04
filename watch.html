@@ -322,29 +322,18 @@ const keyValue = channel.key;
         let cookieHeader = channel.cookie;
 
         player.configure({
-          drm: drmConfig,
-          streaming: {
-            lowLatencyMode: true,
-            bufferingGoal: 15,
-            rebufferingGoal: 2,
-            bufferBehind: 15,
-            retryParameters: {
-              timeout: 10000,
-              maxAttempts: 5,
-              baseDelay: 300,
-              backoffFactor: 1.2
-            },
-            segmentRequestTimeout: 8000,
-            segmentPrefetchLimit: 2,
-            useNativeHlsOnSafari: true
-          },
-          manifest: {
-            retryParameters: {
-              timeout: 8000,
-              maxAttempts: 3
-            }
-          }
-        });
+  drm: {
+    clearKeys: {
+      [channel.keyId]: channel.key
+    }
+  },
+
+  streaming: {
+    bufferingGoal: 15,
+    rebufferingGoal: 2,
+    lowLatencyMode: true
+  }
+});
 
         // Register request filter and append cookieHeader to manifest/segment requests if needed
         player.getNetworkingEngine().registerRequestFilter((type, request) => {
