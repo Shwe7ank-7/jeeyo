@@ -246,35 +246,7 @@ async function fetchChannel() {
     showError("Error loading channel: " + error.message);
     return null;
   }
-} {
-        const channelId = getChannelIdFromUrl();
-        
-        if (!channelId) {
-          showError('No channel ID specified in URL. Add ?id=CHANNEL_ID to the URL');
-          return null;
-        }
-        
-        try {
-          loadingMessage.textContent = `Loading channel ${channelId}...`;
-          const response = await fetch('https://raw.githubusercontent.com/alpha4528/m3u/refs/heads/main/jtv.m3u');
-          
-          if (!response.ok) {
-            throw new Error(`Failed to fetch M3U8 playlist: HTTP ${response.status}`);
-          }
-          
-          const content = await response.text();
-          const channel = findChannelInM3U(content, channelId);
-          
-          if (!channel) {
-            throw new Error(`Channel with ID ${channelId} not found in the playlist`);
-          }
-          
-          return channel;
-        } catch (error) {
-          showError('Error loading channel: ' + error.message);
-          return null;
-        }
-      }
+} 
 
       // Initialize the player with the selected channel
       async function initPlayerWithChannel(channel) {
@@ -286,8 +258,7 @@ async function fetchChannel() {
         }
 
         const video = document.querySelector('video');
-        const player = new shaka.Player();
-        await player.attach(video);
+        const player = new shaka.Player(video);
 
         const container = document.querySelector('.shaka-video-container');
         const ui = new shaka.ui.Overlay(player, container, video);
