@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Player</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.11/shaka-player.compiled.js"></script>
+
+<style>
+body{
+margin:0;
+background:#000;
+}
+
+video{
+width:100vw;
+height:100vh;
+object-fit:contain;
+background:black;
+}
+
+.info{
+position:absolute;
+top:0;
+left:0;
+right:0;
+padding:10px;
+display:flex;
+align-items:center;
+background:linear-gradient(to bottom,rgba(0,0,0,.8),transparent);
+color:white;
+font-family:sans-serif;
+}
+
+.info img{
+width:40px;
+margin-right:10px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="info">
+<img id="logo">
+<div id="name"></div>
+</div>
+
+<video autoplay playsinline></video>
+
+<script>
+
+const JSON_URL="channels.json";
+
+function getId(){
+const p=new URLSearchParams(location.search);
+return p.get("id");
+}
+
+async function loadChannel(){
+
+const id=getId();
+
+const res=await fetch(JSON_URL);
+const data=await res.json();
+
+return data.find(c=>c.id===id);
+
+}
+
+async function start(){
+
+const channel=await loadChannel();
+
+if(!channel){
+alert("Channel not found");
+return;
+}
+
+const video=document.querySelector("video");
+
+const player=new shaka.Player(video);
+
+player.configure({
+drm:{
+clearKeys:{
+[channel.keyId]:channel.key
+}
+}
+});
+
+player.getNetworkingEngine().registerRequestFilter((type,request)=>{
+
+request.headers["Referer"]="https://www.jiotv.com/";
+request.headers["User-Agent"]="plaYtv/7.1.5 (Linux;Android 13)";
+
+if(channel.cookie){
+request.headers["cookie"]=channel.cookie;
+}
+
+});
+
+await player.load(channel.mpd,0,"application/dash+xml");
+
+document.getElementById("logo").src=channel.logo;
+document.getElementById("name").innerText=channel.name;
+
+video.play().catch(()=>{});
+
+}
+
+start();
+
+</script>
+
+</body>
+</html>
