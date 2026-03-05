@@ -50,37 +50,63 @@ margin-right:10px;
 <video autoplay playsinline></video>
 
 <script>
+document.addEventListener("DOMContentLoaded", async () => {
 
-const JSON_URL="channels.json";
+const JSON_URL = "https://raw.githubusercontent.com/Shwe7ank-7/jeeyo/main/channels.json";
 
-function getId(){
-const p=new URLSearchParams(location.search);
-return p.get("id");
+function getChannelId(){
+  const params = new URLSearchParams(location.search);
+  return params.get("id");
 }
 
-async function loadChannel(){
-
-const id=getId();
-
-const res=await fetch(JSON_URL);
-const data=await res.json();
-
-return data.find(c=>c.id===id);
-
+function showError(msg){
+  alert(msg);
 }
 
-async function start(){
+async function fetchChannel(){
 
-const channel=await loadChannel();
+  const id = getChannelId();
 
-if(!channel){
-alert("Channel not found");
+  if(!id){
+    showError("Channel ID missing");
+    return null;
+  }
+
+  try{
+
+    const res = await fetch(JSON_URL);
+    const data = await res.json();
+
+    const channel = data.find(c => String(c.id) === String(id));
+
+    if(!channel){
+      showError("Channel not found");
+      return null;
+    }
+
+    return channel;
+
+  }catch(e){
+    showError("Failed to load JSON");
+    return null;
+  }
+}
+
+async function startPlayer(channel){
+
+shaka.polyfill.installAll();
+
+if(!shaka.Player.isBrowserSupported()){
+showError("Browser not supported");
 return;
 }
 
-const video=document.querySelector("video");
+const video = document.querySelector("video");
+const player = new shaka.Player(video);
 
-const player=new shaka.Player(video);
+document.getElementById("channelLogo").src = channel.logo;
+document.getElementById("channelName").innerText = channel.name;
+document.getElementById("channelInfo").classList.remove("hidden");
 
 player.configure({
 drm:{
@@ -90,28 +116,40 @@ clearKeys:{
 }
 });
 
-player.getNetworkingEngine().registerRequestFilter((type,request)=>{
+player.getNetworkingEngine().registerRequestFilter((type, request)=>{
 
-request.headers["Referer"]="https://www.jiotv.com/";
-request.headers["User-Agent"]="plaYtv/7.1.5 (Linux;Android 13)";
+request.headers["Referer"] = "https://www.jiotv.com/";
+request.headers["User-Agent"] = "plaYtv/7.1.5 (Linux;Android 13)";
 
 if(channel.cookie){
-request.headers["cookie"]=channel.cookie;
+request.headers["Cookie"] = channel.cookie;
 }
 
 });
 
-await player.load(channel.mpd,0,"application/dash+xml");
+try{
 
-document.getElementById("logo").src=channel.logo;
-document.getElementById("name").innerText=channel.name;
+await player.load(channel.mpd);
+
+document.getElementById("loadingMessage").style.display="none";
 
 video.play().catch(()=>{});
 
+}catch(e){
+
+showError("Stream failed to load");
+
 }
 
-start();
+}
 
+const channel = await fetchChannel();
+
+if(channel){
+startPlayer(channel);
+}
+
+});
 </script>
 
 </body>
