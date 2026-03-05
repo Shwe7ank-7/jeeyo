@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Star Sports 1 Hindi HD</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.11/shaka-player.ui.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.11/controls.min.css">
+
+<style>
+html,body{
+margin:0;
+background:#000;
+height:100%;
+}
+
+.shaka-video-container{
+position:absolute;
+inset:0;
+width:100%;
+height:100%;
+}
+
+video{
+width:100%;
+height:100%;
+object-fit:contain;
+background:#000;
+}
+
+.shaka-spinner-container,
+.shaka-spinner,
+.shaka-spinner-svg{
+display:none!important;
+}
+</style>
+</head>
+
+<body>
+
+<div class="shaka-video-container" data-shaka-player>
+<video autoplay playsinline></video>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", async ()=>{
+
+const streamUrl =
+"https://jiotvbpkmob.cdn.jio.com/bpk-tv/Star_Sports_HD1_Hindi_BTS/output/index.mpd";
+
+const cookieHeader =
+"__hdnea__=st=1772683228~exp=1772769628~acl=/*~hmac=8720d34e48aa8c7e01da1af9df926c5f0bff6ad8987976e4b91da32a63d9331f";
+
+const keyId =
+"400131994b445d8c8817202248760fda";
+
+const key =
+"2d56cb6f07a75b9aff165d534ae2bfc4";
+
+
+shaka.polyfill.installAll();
+
+if(!shaka.Player.isBrowserSupported()){
+alert("Browser not supported");
+return;
+}
+
+const video=document.querySelector("video");
+
+const player=new shaka.Player();
+await player.attach(video);
+
+const container=document.querySelector(".shaka-video-container");
+const ui=new shaka.ui.Overlay(player,container,video);
+
+ui.configure({
+controlPanelElements:[
+"play_pause",
+"time_and_duration",
+"mute",
+"volume",
+"spacer",
+"quality",
+"fullscreen"
+]
+});
+
+player.configure({
+drm:{
+clearKeys:{
+[keyId]:key
+}
+}
+});
+
+player.getNetworkingEngine().registerRequestFilter((type,request)=>{
+
+request.headers["Referer"]="https://www.jiotv.com/";
+request.headers["User-Agent"]="plaYtv/7.1.5 (Linux;Android 13)";
+request.headers["Cookie"]=cookieHeader;
+
+if(
+(type===shaka.net.NetworkingEngine.RequestType.MANIFEST ||
+ type===shaka.net.NetworkingEngine.RequestType.SEGMENT) &&
+request.uris[0] &&
+!request.uris[0].includes("__hdnea")
+){
+
+const sep=request.uris[0].includes("?")?"&":"?";
+request.uris[0]+=sep+cookieHeader;
+
+}
+
+});
+
+try{
+
+await player.load(streamUrl);
+
+video.play();
+
+}catch(e){
+
+console.log(e);
+alert("Stream failed");
+
+}
+
+});
+</script>
+
+</body>
+</html>
