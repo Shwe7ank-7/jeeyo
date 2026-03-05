@@ -244,7 +244,7 @@ async function fetchChannel() {
     const response = await fetch(API_URL);
     const channels = await response.json();
 
-    const channel = channels.find(c => c.channel_id === channelId);
+    const channel = channels.find(c => String(c.channel_id) === String(channelId));
 
     if (!channel) {
       throw new Error("Channel not found");
@@ -380,7 +380,7 @@ player.getNetworkingEngine().registerRequestFilter((type, request) => {
 
         try {
           enableAutoplay();
-          await player.load(channel.streamUrl);
+          await player.load(channel.streamUrl, 0, 'application/dash+xml');
           if (video.readyState >= 3) {
             await attemptAutoplay();
           } else {
