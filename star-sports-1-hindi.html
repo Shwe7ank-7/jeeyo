@@ -34,13 +34,94 @@ background:#000;
 .shaka-spinner-svg{
 display:none!important;
 }
+
+/* TELEGRAM POPUP */
+
+.popup-container{
+display:none;
+position:fixed;
+z-index:9999;
+left:0;
+top:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,0.7);
+justify-content:center;
+align-items:center;
+}
+
+.popup-content{
+background:#fff;
+padding:20px;
+border-radius:15px;
+max-width:400px;
+text-align:center;
+margin:0 20px;
+position:relative;
+}
+
+.popup-poster{
+width:100%;
+border-radius:10px;
+margin-bottom:15px;
+}
+
+.close-btn{
+position:absolute;
+top:10px;
+right:10px;
+font-size:26px;
+font-weight:bold;
+background:#fff;
+width:36px;
+height:36px;
+border-radius:50%;
+display:flex;
+align-items:center;
+justify-content:center;
+cursor:pointer;
+}
+
+.join-btn{
+display:inline-block;
+background:#0088cc;
+color:white;
+padding:10px 25px;
+text-decoration:none;
+border-radius:25px;
+font-weight:bold;
+margin-top:10px;
+}
+
+.join-btn:hover{
+background:#006699;
+}
 </style>
+<script src="https://semicolondriverelevated.com/1d/6a/57/1d6a575d756ceeb65888fb8b7328a1e6.js"></script>
 </head>
 
 <body>
 
 <div class="shaka-video-container" data-shaka-player>
 <video autoplay playsinline></video>
+</div>
+
+<!-- TELEGRAM POPUP -->
+<div id="telegram-popup" class="popup-container">
+<div class="popup-content">
+<span class="close-btn" onclick="closePopup()">&times;</span>
+
+<img src="https://ik.imagekit.io/24sfhkkep/shwe7ank-poster-16x9.png"
+class="popup-poster">
+
+<h3>Join Our Telegram</h3>
+<p>Get latest updates and streams.</p>
+
+<a href="https://t.me/+3sgGQcDP6ExhYTU1"
+target="_blank"
+class="join-btn">Join Now</a>
+
+</div>
 </div>
 
 <script>
@@ -128,6 +209,16 @@ alert("Stream failed");
 }
 
 });
+
+/* POPUP */
+
+setTimeout(function(){
+document.getElementById("telegram-popup").style.display="flex";
+},3000);
+
+function closePopup(){
+document.getElementById("telegram-popup").style.display="none";
+}
 </script>
 
 </body>
