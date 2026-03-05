@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>Player</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.11/shaka-player.ui.min.js"></script>
@@ -38,34 +39,35 @@ background:#000;
 </div>
 
 <script>
-document.addEventListener("DOMContentLoaded", async () => {
+document.addEventListener("DOMContentLoaded", async ()=>{
 
-const JSON_URL =
-"https://raw.githubusercontent.com/Shwe7ank-7/jeeyo/main/channels.json";
+const JSON_URL="https://raw.githubusercontent.com/Shwe7ank-7/jeeyo/main/channels.json";
 
-function getId(){
-return new URLSearchParams(location.search).get("id");
-}
-
-const id = getId();
+const id=new URLSearchParams(location.search).get("id");
 
 if(!id){
 alert("Channel ID missing");
 return;
 }
 
-const res = await fetch(JSON_URL);
-const channels = await res.json();
+const res=await fetch(JSON_URL);
+const channels=await res.json();
 
-const channel = channels.find(c => c.id == id);
+const channel=channels.find(c=>String(c.id)===String(id));
 
 if(!channel){
 alert("Channel not found");
 return;
 }
 
-const streamUrl = channel.mpd;
-const cookieHeader = channel.cookie;
+let streamUrl=channel.mpd;
+let cookieHeader=channel.cookie;
+
+/* append cookie to MPD URL */
+if(cookieHeader && !streamUrl.includes("hdnea")){
+const sep=streamUrl.includes("?")?"&":"?";
+streamUrl+=sep+cookieHeader;
+}
 
 shaka.polyfill.installAll();
 
@@ -74,13 +76,12 @@ alert("Browser not supported");
 return;
 }
 
-const video = document.querySelector("video");
+const video=document.querySelector("video");
 
-const player = new shaka.Player();
-await player.attach(video);
+const player=new shaka.Player(video);
 
-const container = document.querySelector(".shaka-video-container");
-const ui = new shaka.ui.Overlay(player, container, video);
+const container=document.querySelector(".shaka-video-container");
+const ui=new shaka.ui.Overlay(player,container,video);
 
 ui.configure({
 controlPanelElements:[
@@ -102,25 +103,16 @@ clearKeys:{
 }
 });
 
+/* networking headers */
 player.getNetworkingEngine().registerRequestFilter((type,request)=>{
 
 request.headers["Referer"]="https://www.jiotv.com/";
 request.headers["User-Agent"]="plaYtv/7.1.5 (Linux;Android 13)";
 request.headers["Cookie"]=cookieHeader;
 
-if(
-(type===shaka.net.NetworkingEngine.RequestType.MANIFEST ||
- type===shaka.net.NetworkingEngine.RequestType.SEGMENT) &&
-request.uris[0] &&
-!request.uris[0].includes("__hdnea")
-){
-
-const sep = request.uris[0].includes("?") ? "&" : "?";
-request.uris[0] += sep + cookieHeader;
-
-}
-
 });
+
+/* load stream */
 
 try{
 
@@ -130,7 +122,7 @@ video.play();
 
 }catch(e){
 
-console.error(e);
+console.log(e);
 alert("Stream failed");
 
 }
