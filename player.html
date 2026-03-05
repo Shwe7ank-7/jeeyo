@@ -1,112 +1,98 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Player</title>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.11/shaka-player.compiled.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.11/shaka-player.ui.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.11/controls.min.css">
 
 <style>
-body{
+html,body{
 margin:0;
 background:#000;
+height:100%;
+}
+
+.shaka-video-container{
+position:absolute;
+inset:0;
+width:100%;
+height:100%;
 }
 
 video{
-width:100vw;
-height:100vh;
+width:100%;
+height:100%;
 object-fit:contain;
-background:black;
-}
-
-.info{
-position:absolute;
-top:0;
-left:0;
-right:0;
-padding:10px;
-display:flex;
-align-items:center;
-background:linear-gradient(to bottom,rgba(0,0,0,.8),transparent);
-color:white;
-font-family:sans-serif;
-}
-
-.info img{
-width:40px;
-margin-right:10px;
+background:#000;
 }
 </style>
 </head>
 
 <body>
 
-<div class="info">
-<img id="logo">
-<div id="name"></div>
-</div>
-
+<div class="shaka-video-container" data-shaka-player>
 <video autoplay playsinline></video>
+</div>
 
 <script>
 document.addEventListener("DOMContentLoaded", async () => {
 
-const JSON_URL = "https://raw.githubusercontent.com/Shwe7ank-7/jeeyo/main/channels.json";
+const JSON_URL =
+"https://raw.githubusercontent.com/Shwe7ank-7/jeeyo/main/channels.json";
 
-function getChannelId(){
-  const params = new URLSearchParams(location.search);
-  return params.get("id");
+function getId(){
+return new URLSearchParams(location.search).get("id");
 }
 
-function showError(msg){
-  alert(msg);
+const id = getId();
+
+if(!id){
+alert("Channel ID missing");
+return;
 }
 
-async function fetchChannel(){
+const res = await fetch(JSON_URL);
+const channels = await res.json();
 
-  const id = getChannelId();
+const channel = channels.find(c => c.id == id);
 
-  if(!id){
-    showError("Channel ID missing");
-    return null;
-  }
-
-  try{
-
-    const res = await fetch(JSON_URL);
-    const data = await res.json();
-
-    const channel = data.find(c => String(c.id) === String(id));
-
-    if(!channel){
-      showError("Channel not found");
-      return null;
-    }
-
-    return channel;
-
-  }catch(e){
-    showError("Failed to load JSON");
-    return null;
-  }
+if(!channel){
+alert("Channel not found");
+return;
 }
 
-async function startPlayer(channel){
+const streamUrl = channel.mpd;
+const cookieHeader = channel.cookie;
 
 shaka.polyfill.installAll();
 
 if(!shaka.Player.isBrowserSupported()){
-showError("Browser not supported");
+alert("Browser not supported");
 return;
 }
 
 const video = document.querySelector("video");
-const player = new shaka.Player(video);
 
-document.getElementById("channelLogo").src = channel.logo;
-document.getElementById("channelName").innerText = channel.name;
-document.getElementById("channelInfo").classList.remove("hidden");
+const player = new shaka.Player();
+await player.attach(video);
+
+const container = document.querySelector(".shaka-video-container");
+const ui = new shaka.ui.Overlay(player, container, video);
+
+ui.configure({
+controlPanelElements:[
+"play_pause",
+"time_and_duration",
+"mute",
+"volume",
+"spacer",
+"quality",
+"fullscreen"
+]
+});
 
 player.configure({
 drm:{
@@ -116,37 +102,37 @@ clearKeys:{
 }
 });
 
-player.getNetworkingEngine().registerRequestFilter((type, request)=>{
+player.getNetworkingEngine().registerRequestFilter((type,request)=>{
 
-request.headers["Referer"] = "https://www.jiotv.com/";
-request.headers["User-Agent"] = "plaYtv/7.1.5 (Linux;Android 13)";
+request.headers["Referer"]="https://www.jiotv.com/";
+request.headers["User-Agent"]="plaYtv/7.1.5 (Linux;Android 13)";
+request.headers["Cookie"]=cookieHeader;
 
-if(channel.cookie){
-request.headers["Cookie"] = channel.cookie;
+if(
+(type===shaka.net.NetworkingEngine.RequestType.MANIFEST ||
+ type===shaka.net.NetworkingEngine.RequestType.SEGMENT) &&
+request.uris[0] &&
+!request.uris[0].includes("__hdnea")
+){
+
+const sep = request.uris[0].includes("?") ? "&" : "?";
+request.uris[0] += sep + cookieHeader;
+
 }
 
 });
 
 try{
 
-await player.load(channel.mpd);
+await player.load(streamUrl);
 
-document.getElementById("loadingMessage").style.display="none";
-
-video.play().catch(()=>{});
+video.play();
 
 }catch(e){
 
-showError("Stream failed to load");
+console.error(e);
+alert("Stream failed");
 
-}
-
-}
-
-const channel = await fetchChannel();
-
-if(channel){
-startPlayer(channel);
 }
 
 });
