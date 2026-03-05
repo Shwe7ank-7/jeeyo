@@ -73,6 +73,17 @@ function showError(msg){
 document.getElementById("loadingMessage").innerText=msg;
 }
 
+/* CDN FIX */
+function fixCDN(url){
+
+if(!url) return url;
+
+return url
+.replace("jiotvmblive.cdn.jio.com","jiotvbpkmob.cdn.jio.com")
+.replace("jiotv-live.cdn.jio.com","jiotvbpkmob.cdn.jio.com");
+
+}
+
 async function fetchChannel(){
 
 const params=new URLSearchParams(location.search);
@@ -88,7 +99,7 @@ try{
 const res=await fetch(PLAYLIST_URL);
 const text=await res.text();
 
-const lines=text.split("\n");
+const lines=text.split(/\r?\n/);
 
 let channel={};
 
@@ -96,7 +107,7 @@ for(let i=0;i<lines.length;i++){
 
 const line=lines[i].trim();
 
-if(line.includes(`tvg-id="${channelId}"`)){
+if(line.includes('tvg-id="'+channelId+'"')){
 
 const name=line.split(",").pop();
 const logo=line.match(/tvg-logo="([^"]+)"/)?.[1];
@@ -114,7 +125,7 @@ logo:logo,
 keyId:keyMatch?.[1],
 key:keyMatch?.[2],
 cookie:cookieMatch?.[1],
-streamUrl:streamLine
+streamUrl:fixCDN(streamLine?.trim())
 };
 
 break;
@@ -168,14 +179,14 @@ request.headers["Referer"]="https://www.jiotv.com/";
 request.headers["User-Agent"]="plaYtv/7.1.5 (Linux;Android 13)";
 
 if(channel.cookie){
-request.headers["Cookie"]=channel.cookie;
+request.headers["cookie"]=channel.cookie;
 }
 
 });
 
 try{
 
-await player.load(channel.streamUrl);
+await player.load(channel.streamUrl, 0, "application/dash+xml");
 
 document.getElementById("loadingMessage").style.display="none";
 
