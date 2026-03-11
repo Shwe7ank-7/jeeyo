@@ -100,121 +100,124 @@ border-radius:10px;
 const API="https://pkll.xojiv79335.workers.dev/";
 
 function getId(){
-return new URLSearchParams(location.search).get("id");
+ return new URLSearchParams(location.search).get("id");
 }
 
 async function fetchChannel(){
 
-const id=getId();
+ const id=getId();
+ if(!id){
+  showError("Channel ID missing");
+  return null;
+ }
 
-if(!id){
-showError("Channel ID missing");
-return null;
-}
+ const res=await fetch(API);
+ const data=await res.json();
 
-const res=await fetch(API);
-const data=await res.json();
-
-return data.find(c=>c.channel_id==id);
-
+ return data.find(c=>c.channel_id==id);
 }
 
 function showError(msg){
-document.getElementById("loading").style.display="none";
-const err=document.getElementById("error");
-err.innerText=msg;
-err.style.display="block";
+ document.getElementById("loading").style.display="none";
+ const err=document.getElementById("error");
+ err.innerText=msg;
+ err.style.display="block";
 }
 
 async function startPlayer(channel){
 
-shaka.polyfill.installAll();
+ shaka.polyfill.installAll();
 
-if(!shaka.Player.isBrowserSupported()){
-showError("Browser not supported");
-return;
-}
+ if(!shaka.Player.isBrowserSupported()){
+  showError("Browser not supported");
+  return;
+ }
 
-const video=document.querySelector("video");
+ const video=document.querySelector("video");
 
-const player=new shaka.Player(video);
+ const player=new shaka.Player(video);
 
-const container=document.querySelector(".shaka-video-container");
+ const container=document.querySelector(".shaka-video-container");
 
-const ui=new shaka.ui.Overlay(player,container,video);
+ new shaka.ui.Overlay(player,container,video);
 
-ui.configure({
-controlPanelElements:[
-'play_pause',
-'time_and_duration',
-'mute',
-'volume',
-'spacer',
-'quality',
-'fullscreen'
-]
-});
+ /* DRM */
 
-player.configure({
+ player.configure({
+  drm:{
+   clearKeys:{
+    [channel.keyId]:channel.key
+   }
+  },
+  streaming:{
+   bufferingGoal:20,
+   rebufferingGoal:3,
+   lowLatencyMode:true
+  }
+ });
 
-drm:{
-clearKeys:{
-[channel.keyId]:channel.key
-}
-},
+ /* NETWORK FILTER */
 
-streaming:{
-bufferingGoal:15,
-rebufferingGoal:2,
-retryParameters:{
-maxAttempts:5
-}
-}
+ const cookie=channel.cookie;
 
-});
+ player.getNetworkingEngine().registerRequestFilter((type,request)=>{
 
-player.getNetworkingEngine().registerRequestFilter((type,request)=>{
+  request.headers["Referer"]="https://www.jiotv.com/";
+  request.headers["User-Agent"]="plaYtv/7.1.5 (Linux;Android 13) ExoPlayerLib/2.11.6";
 
-request.headers["Referer"]="https://www.jiotv.com/";
-request.headers["User-Agent"]="plaYtv/7.1.5 (Linux;Android 13) ExoPlayerLib/2.11.6";
+  if(cookie){
+   request.headers["Cookie"]=cookie;
+  }
 
-if(channel.cookie){
-request.headers["Cookie"]=channel.cookie;
-}
+  /* append cookie token to segments */
 
-});
+  if(
+   cookie &&
+   (type===shaka.net.NetworkingEngine.RequestType.SEGMENT ||
+    type===shaka.net.NetworkingEngine.RequestType.MANIFEST)
+  ){
 
-try{
+   if(!request.uris[0].includes("__hdnea__")){
 
-await player.load(channel.channel_url);
+    const sep=request.uris[0].includes("?") ? "&" : "?";
+    request.uris[0]+=sep+cookie;
 
-document.getElementById("loading").style.display="none";
+   }
 
-video.play();
+  }
 
-}catch(e){
+ });
 
-showError("Stream failed to load");
+ try{
 
-console.error(e);
+  await player.load(channel.channel_url);
 
-}
+  document.getElementById("loading").style.display="none";
+
+  video.play();
+
+ }catch(e){
+
+  console.error(e);
+  showError("Stream failed to start");
+
+ }
 
 }
 
 async function init(){
 
-const channel=await fetchChannel();
+ const channel=await fetchChannel();
 
-if(!channel){
-showError("Channel not found");
-return;
-}
+ if(!channel){
+  showError("Channel not found");
+  return;
+ }
 
-document.getElementById("channelLogo").src=channel.channel_logo;
-document.getElementById("channelName").innerText=channel.channel_name;
+ document.getElementById("channelLogo").src=channel.channel_logo;
+ document.getElementById("channelName").innerText=channel.channel_name;
 
-startPlayer(channel);
+ startPlayer(channel);
 
 }
 
