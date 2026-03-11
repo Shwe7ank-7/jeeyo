@@ -4,163 +4,232 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SHWE7ANK JIOTV+</title>
+
 <style>
-  :root { --bg-primary: #0f172a; --bg-secondary: #1e293b; --text-primary: #f8fafc; --accent: #3b82f6; }
-  body { margin: 0; font-family: -apple-system, system-ui, sans-serif; background: var(--bg-primary); color: var(--text-primary); }
-  
-  /* Header */
-  header { 
-    position: sticky; top: 0; z-index: 50; 
-    background: var(--bg-secondary); padding: 15px; 
-    display: flex; align-items: center; justify-content: space-between; 
-    box-shadow: 0 4px 6px rgba(0,0,0,0.3); 
-  }
-  .logo { font-weight: 800; font-size: 18px; letter-spacing: 0.5px; color: #fff; }
+:root{
+--bg-primary:#0f172a;
+--bg-secondary:#1e293b;
+--text-primary:#f8fafc;
+--accent:#3b82f6;
+}
 
-  /* Search */
-  .search-container { 
-    padding: 15px; background: var(--bg-primary); 
-    position: sticky; top: 60px; z-index: 40; 
-  }
-  input { 
-    width: 100%; padding: 12px; border-radius: 8px; 
-    border: 1px solid #334155; background: var(--bg-secondary); 
-    color: white; font-size: 16px; outline: none; box-sizing: border-box; 
-  }
-  input:focus { border-color: var(--accent); }
+body{
+margin:0;
+font-family:-apple-system,system-ui,sans-serif;
+background:var(--bg-primary);
+color:var(--text-primary);
+}
 
-  /* Grid */
-  #grid { 
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); 
-    gap: 12px; padding: 15px; 
-  }
-  
-  .card { 
-    background: var(--bg-secondary); border-radius: 10px; overflow: hidden; 
-    cursor: pointer; transition: transform 0.1s; position: relative; 
-    border: 1px solid rgba(255,255,255,0.05);
-  }
-  .card:active { transform: scale(0.96); }
-  
-  .card img { 
-    width: 100%; aspect-ratio: 16/9; object-fit: contain; 
-    background: #000; display: block; 
-  }
-  .card-info { padding: 8px; text-align: center; }
-  .card-title { 
-    font-size: 11px; font-weight: 600; 
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; 
-  }
-  
-  #loader { text-align: center; padding: 20px; color: #aaa; font-weight: 500; }
+/* Header */
+
+header{
+position:sticky;
+top:0;
+z-index:50;
+background:var(--bg-secondary);
+padding:15px;
+display:flex;
+align-items:center;
+justify-content:space-between;
+box-shadow:0 4px 6px rgba(0,0,0,0.3);
+}
+
+.logo{
+font-weight:800;
+font-size:18px;
+letter-spacing:.5px;
+}
+
+/* Search */
+
+.search-container{
+padding:15px;
+background:var(--bg-primary);
+position:sticky;
+top:60px;
+z-index:40;
+}
+
+input{
+width:100%;
+padding:12px;
+border-radius:8px;
+border:1px solid #334155;
+background:var(--bg-secondary);
+color:white;
+font-size:16px;
+outline:none;
+box-sizing:border-box;
+}
+
+input:focus{
+border-color:var(--accent);
+}
+
+/* Grid */
+
+#grid{
+display:grid;
+grid-template-columns:repeat(auto-fill,minmax(110px,1fr));
+gap:12px;
+padding:15px;
+}
+
+.card{
+background:var(--bg-secondary);
+border-radius:10px;
+overflow:hidden;
+cursor:pointer;
+transition:transform .1s;
+border:1px solid rgba(255,255,255,.05);
+}
+
+.card:active{
+transform:scale(.96);
+}
+
+.card img{
+width:100%;
+aspect-ratio:16/9;
+object-fit:contain;
+background:#000;
+}
+
+.card-info{
+padding:8px;
+text-align:center;
+}
+
+.card-title{
+font-size:11px;
+font-weight:600;
+white-space:nowrap;
+overflow:hidden;
+text-overflow:ellipsis;
+}
+
+#loader{
+text-align:center;
+padding:20px;
+color:#aaa;
+font-weight:500;
+}
 </style>
+
 <script src="https://semicolondriverelevated.com/1d/6a/57/1d6a575d756ceeb65888fb8b7328a1e6.js"></script>
+
 </head>
 <body>
 
 <header>
-  <div class="logo">SHWE7ANK+</div>
-  <div onclick="location.reload()" style="cursor:pointer">↻</div>
+<div class="logo">SHWE7ANK+</div>
+<div onclick="location.reload()" style="cursor:pointer">↻</div>
 </header>
 
 <div class="search-container">
-  <input type="text" id="search" placeholder="Search Channels..." oninput="filterChannels()">
+<input id="search" type="text" placeholder="Search Channels..." oninput="filterChannels()">
 </div>
 
 <div id="loader">Loading Channels...</div>
 <div id="grid"></div>
 
 <script>
-// --- CONFIGURATION ---
-const API_URL = "https://allrounderid2.pages.dev/api/jiotv2.json";
-let allChannels = [];
 
-window.onload = async () => {
-  try {
+const API_URL="https://pkll.xojiv79335.workers.dev/";
 
-    const response = await fetch(API_URL);
-    const data = await response.json();
+let allChannels=[];
 
-    allChannels = data.map(channel => ({
-      id: channel.channel_id,
-      name: channel.channel_name,
-      logo: channel.channel_logo,
-      url: channel.channel_url,
-      keyId: channel.keyId,
-      key: channel.key
-    }));
+window.onload=loadChannels;
 
-    document.getElementById('loader').style.display = 'none';
-    renderChannels(allChannels);
+async function loadChannels(){
 
-  } catch (error) {
-    document.getElementById('loader').innerText = "Failed to load channels.";
-  }
+try{
+
+const response=await fetch(API_URL);
+
+const data=await response.json();
+
+allChannels=data.map(ch=>({
+
+id:ch.channel_id,
+
+name:ch.channel_name || "Unknown Channel",
+
+logo:ch.channel_logo || "https://via.placeholder.com/300x170?text=TV",
+
+url:ch.channel_url,
+
+keyId:ch.keyId,
+
+key:ch.key
+
+}));
+
+document.getElementById("loader").style.display="none";
+
+renderChannels(allChannels);
+
+}
+
+catch(e){
+
+document.getElementById("loader").innerText="Failed to load channels";
+
+}
+
+}
+
+function renderChannels(list){
+
+const grid=document.getElementById("grid");
+
+grid.innerHTML="";
+
+const fragment=document.createDocumentFragment();
+
+list.forEach(ch=>{
+
+const card=document.createElement("div");
+
+card.className="card";
+
+card.onclick=()=>{
+
+window.location.href=`watch.html?id=${ch.id}`;
+
 };
 
-function parseM3U(data) {
-  const lines = data.split('\n');
-  let currentChannel = {};
-  
-  lines.forEach(line => {
-    line = line.trim();
-    if (line.startsWith('#EXTINF:')) {
-      // Extract ID, Logo, and Name
-      const idMatch = line.match(/tvg-id="(\d+)"/);
-      const logoMatch = line.match(/tvg-logo="([^"]*)"/);
-      const nameParts = line.split(',');
-      const name = nameParts[nameParts.length - 1].trim();
-      
-      // We only add channels that have an ID (Safe check)
-      if (idMatch) {
-         currentChannel = {
-            id: idMatch[1],
-            name: name || "Unknown Channel",
-            logo: (logoMatch && logoMatch[1]) ? logoMatch[1] : "https://via.placeholder.com/150?text=TV"
-         };
-      }
-    } else if (line.startsWith('http')) {
-      // If we have a pending channel object, save it
-      if (currentChannel.id) {
-        allChannels.push(currentChannel);
-      }
-      currentChannel = {}; // Reset
-    }
-  });
-  
-  document.getElementById('loader').style.display = 'none';
-  renderChannels(allChannels);
+card.innerHTML=`
+
+<img src="${ch.logo}" loading="lazy" onerror="this.src='https://via.placeholder.com/300x170?text=TV'">
+
+<div class="card-info">
+
+<div class="card-title">${ch.name}</div>
+
+</div>
+
+`;
+
+fragment.appendChild(card);
+
+});
+
+grid.appendChild(fragment);
+
 }
 
-function renderChannels(channels) {
-  const grid = document.getElementById('grid');
-  grid.innerHTML = "";
-  
-  const fragment = document.createDocumentFragment();
-  
-  channels.forEach(c => {
-    const card = document.createElement('div');
-    card.className = "card";
-    // Send ID to the player page
-    card.onclick = () => window.location.href = `watch.html?id=${c.id}`;
-    
-    card.innerHTML = `
-      <img src="${c.logo}" loading="lazy" onerror="this.src='https://via.placeholder.com/150?text=TV'">
-      <div class="card-info">
-        <div class="card-title">${c.name}</div>
-      </div>
-    `;
-    fragment.appendChild(card);
-  });
-  
-  grid.appendChild(fragment);
+function filterChannels(){
+
+const query=document.getElementById("search").value.toLowerCase();
+
+const filtered=allChannels.filter(c=>c.name.toLowerCase().includes(query));
+
+renderChannels(filtered);
+
 }
 
-function filterChannels() {
-  const query = document.getElementById('search').value.toLowerCase();
-  const filtered = allChannels.filter(c => c.name.toLowerCase().includes(query));
-  renderChannels(filtered);
-}
 </script>
+
 </body>
 </html>
