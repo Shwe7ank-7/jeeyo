@@ -144,33 +144,42 @@ async function startPlayer(channel){
  /* DRM */
 
  player.configure({
-  drm:{
-   clearKeys:{
-    [channel.keyId]:channel.key
-   }
+  drm: {
+    clearKeys: {
+      [channel.keyId]: channel.key
+    }
   },
+
   streaming: {
-            lowLatencyMode: true,
-            bufferingGoal: 15,
-            rebufferingGoal: 2,
-            bufferBehind: 15,
-            retryParameters: {
-              timeout: 10000,
-              maxAttempts: 5,
-              baseDelay: 300,
-              backoffFactor: 1.2
-            },
-            segmentRequestTimeout: 8000,
-            segmentPrefetchLimit: 2,
-            useNativeHlsOnSafari: true
-          },
-          manifest: {
-            retryParameters: {
-              timeout: 8000,
-              maxAttempts: 3
-            }
-          }
-        });
+    lowLatencyMode: true,
+
+    bufferingGoal: 30,          // increase buffer to stop fake buffering
+    rebufferingGoal: 2,
+    bufferBehind: 30,
+
+    inaccurateManifestTolerance: 2,
+
+    retryParameters: {
+      timeout: 12000,
+      maxAttempts: 5,
+      baseDelay: 300,
+      backoffFactor: 1.2
+    },
+
+    segmentRequestTimeout: 10000,
+    segmentPrefetchLimit: 3,
+
+    stallEnabled: false,        // ⭐ THIS removes fake buffering spinner
+    useNativeHlsOnSafari: true
+  },
+
+  manifest: {
+    retryParameters: {
+      timeout: 8000,
+      maxAttempts: 3
+    }
+  }
+});
 
  /* NETWORK FILTER */
 
