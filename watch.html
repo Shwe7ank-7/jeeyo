@@ -92,7 +92,7 @@ video{
   letter-spacing:.5px;
 }
 </style>
-  <script src="https://semicolondriverelevated.com/1d/6a/57/1d6a575d756ceeb65888fb8b7328a1e6.js"></script>
+<script src="https://semicolondriverelevated.com/1d/6a/57/1d6a575d756ceeb65888fb8b7328a1e6.js"></script>
 </head>
 
 <body>
@@ -119,111 +119,100 @@ video{
 
 <script>
 
-/* ──────────────────────────────────────────
-   CONFIGURATION
-────────────────────────────────────────── */
+/* ── CONFIGURATION ── */
 const CHANNELS_URL    = "https://raw.githubusercontent.com/Shubhamkur/json/refs/heads/main/jiohd";
 const COOKIE_PRIMARY  = "https://binge-jiotv.pages.dev/data/cookies.json";
 const COOKIE_FALLBACK = "https://allrounder-live3.pages.dev/api/cookie.json";
-const IOS_CDN         = "https://jiotvioslive.cdn.jio.com";
 
-/* ──────────────────────────────────────────
-   STATUS HELPER
-────────────────────────────────────────── */
+/* ── STATUS ── */
 const statusEl = document.getElementById("status");
 
 function setStatus(msg, isError = false){
-  statusEl.textContent = msg;
-  statusEl.className = isError ? "error" : "";
+  statusEl.textContent   = msg;
+  statusEl.className     = isError ? "error" : "";
   statusEl.style.opacity = "1";
   console[isError ? "error" : "log"]((isError ? "ERR: " : "INF: ") + msg);
   if(!isError){
-    setTimeout(() => { statusEl.style.opacity = "0"; }, 4000);
+    setTimeout(() => { if(statusEl.textContent === msg) statusEl.style.opacity = "0"; }, 4000);
   }
 }
 
-/* ──────────────────────────────────────────
-   MAIN INIT
-────────────────────────────────────────── */
+/* ── FETCH CONFIG ── */
+async function fetchConfig(){
+  try{
+
+    setStatus("Fetching channel data…");
+    const channelRes  = await fetch(CHANNELS_URL);
+    const channelText = await channelRes.text();
+    const channelJson = channelText.trim().startsWith('[') ? channelText : '[' + channelText + ']';
+    const channelList = JSON.parse(channelJson);
+
+    const channelId   = new URLSearchParams(location.search).get("id");
+    const channelData = channelList.find(c => String(c.id) === String(channelId));
+
+    if(!channelData){
+      setStatus("Channel not found!", true);
+      return null;
+    }
+
+    /* ── COOKIE SYSTEM (UPDATED LIKE YOUR FRIEND) ── */
+    let primaryCookie = "";
+    let fallbackCookie = "";
+
+    try{
+      setStatus("Fetching primary cookie…");
+      const res  = await fetch(COOKIE_PRIMARY);
+      const data = await res.json();
+
+      const entry = Array.isArray(data) ? data.find(i => i.cookie) : null;
+      if(entry?.cookie) primaryCookie = entry.cookie;
+    }catch(e){ console.warn("Primary cookie failed"); }
+
+    try{
+      const res  = await fetch(COOKIE_FALLBACK);
+      const data = await res.json();
+
+      if(data?.cookie) fallbackCookie = data.cookie;
+    }catch(e){ console.warn("Fallback cookie failed"); }
+
+    /* If primary empty → use fallback */
+    if(!primaryCookie){
+      primaryCookie = fallbackCookie;
+      fallbackCookie = "";
+    }
+
+    const streamUrls = [channelData.url, channelData.url1, channelData.url2, channelData.url3]
+      .filter(Boolean)
+      .map(u => u.replace('bpk-tv//','bpk-tv/'));
+
+    return {
+      channelData,
+      streamUrls,
+      primaryCookie,
+      fallbackCookie
+    };
+
+  }catch(err){
+    setStatus("Critical error!", true);
+    return null;
+  }
+}
+
+/* ── MAIN ── */
 document.addEventListener("DOMContentLoaded", async () => {
 
-  /* 1 ─ Get channel id from URL */
-  const channelId = new URLSearchParams(location.search).get("id");
-  if(!channelId){ setStatus("No channel ID in URL!", true); return; }
+  const cfg = await fetchConfig();
+  if(!cfg) return;
 
-  /* 2 ─ Fetch channel list + both cookies simultaneously */
-  setStatus("Fetching channel data & cookies…");
-  let channel, primaryCookie = "", fallbackCookie = "";
+  const { channelData, streamUrls, primaryCookie, fallbackCookie } = cfg;
 
-  try{
-    const [channelRes, primaryRes, fallbackRes] = await Promise.allSettled([
-      fetch(CHANNELS_URL).then(r => r.text()),
-      fetch(COOKIE_PRIMARY).then(r => r.json()),
-      fetch(COOKIE_FALLBACK).then(r => r.json())
-    ]);
+  document.getElementById("channelLogo").src         = channelData.logo || "";
+  document.getElementById("channelName").textContent = channelData.name || "";
 
-    /* Channel list — parse as text first to handle bare objects */
-    if(channelRes.status === "fulfilled"){
-      const text  = channelRes.value;
-      const fixed = text.trim().startsWith('[') ? text : '[' + text + ']';
-      const list  = JSON.parse(fixed);
-      channel = list.find(c => String(c.id) === String(channelId));
-    }
-
-    /* Primary cookie → array structure: find item with .cookie */
-    if(primaryRes.status === "fulfilled"){
-      const data = primaryRes.value;
-      const entry = Array.isArray(data) ? data.find(i => i.cookie) : null;
-      if(entry && entry.cookie) primaryCookie = entry.cookie;
-    }
-
-    /* Fallback cookie → root object structure: { cookie: "..." } */
-    if(fallbackRes.status === "fulfilled"){
-      const data = fallbackRes.value;
-      if(data && data.cookie) fallbackCookie = data.cookie;
-    }
-
-  }catch(e){
-    setStatus("Critical fetch error!", true); return;
-  }
-
-  if(!channel){
-    setStatus("Channel ID " + channelId + " not found!", true); return;
-  }
-
-  /* If primary failed, promote fallback to primary */
-  if(!primaryCookie){
-    primaryCookie  = fallbackCookie;
-    fallbackCookie = "";
-  }
-
-  /* 3 ─ Show channel info */
-  document.getElementById("channelLogo").src      = channel.logo || "";
-  document.getElementById("channelName").textContent = channel.name || "";
-
-  /* 4 ─ Build stream URL list: url1 → url2 → url3 → iOS CDN fallback */
-  const streamUrls = [channel.url, channel.url1, channel.url2, channel.url3]
-    .filter(Boolean)
-    .map(u => u.replace('bpk-tv//', 'bpk-tv/'));
-
-  /* Add iOS CDN as 4th option if not already present */
-  const baseUrl = channel.url1 || streamUrls[0];
-  if(baseUrl){
-    const urlPath = baseUrl.replace(/^https?:\/\/[^\/]+/, '').replace('bpk-tv//', 'bpk-tv/');
-    const iosFallbackUrl = IOS_CDN + urlPath;
-    if(!streamUrls.some(u => u.startsWith(IOS_CDN))){
-      streamUrls.push(iosFallbackUrl);
-    }
-  }
-
-  if(streamUrls.length === 0){
-    setStatus("No stream URLs found for this channel!", true); return;
-  }
-
-  /* 5 ─ Init Shaka Player */
   shaka.polyfill.installAll();
   if(!shaka.Player.isBrowserSupported()){
-    setStatus("Browser not supported by Shaka!", true); return;
+    setStatus("Browser not supported!", true);
+    return;
   }
 
   const videoEl   = document.getElementById("video");
@@ -232,51 +221,27 @@ document.addEventListener("DOMContentLoaded", async () => {
   const player = new shaka.Player();
   await player.attach(videoEl);
 
-  /* UI controls */
-  const ui = new shaka.ui.Overlay(player, container, videoEl);
-  ui.configure({
-    controlPanelElements:[
-      "play_pause","time_and_duration","spacer",
-      "language","picture_in_picture","quality","fullscreen"
-    ],
-    seekBarColors:{
-      base:"rgba(255,255,255,0.3)",
-      buffered:"rgba(255,255,255,0.6)",
-      played:"#3b82f6"
-    }
-  });
+  new shaka.ui.Overlay(player, container, videoEl);
 
-  /* DRM + streaming config */
   player.configure({
-    drm:{ clearKeys:{ [channel.keyId]: channel.key } },
-    manifest:{ defaultPresentationDelay: 5 },
-    streaming:{
-      bufferingGoal:   10,
-      rebufferingGoal: 2,
-      safeSeekOffset:  5,
-      lowLatencyMode:  true
-    }
+    drm:{ clearKeys:{ [channelData.keyId]: channelData.key } },
+    streaming:{ lowLatencyMode:true }
   });
 
-  /* Active cookie — swapped per round by the outer loop */
   let activeCookie = primaryCookie;
 
-  /* Network filter — always reads activeCookie at call time */
   player.getNetworkingEngine().registerRequestFilter((type, request) => {
     request.headers["Referer"]    = "https://www.jiotv.com/";
-    request.headers["User-Agent"] = "plaYtv/7.1.5 (Linux;Android 13) ExoPlayerLib/2.11.6";
+    request.headers["User-Agent"] = "plaYtv/7.1.5";
 
-    if(
-      activeCookie &&
+    if(activeCookie &&
       (type === shaka.net.NetworkingEngine.RequestType.MANIFEST ||
-       type === shaka.net.NetworkingEngine.RequestType.SEGMENT)
-    ){
-      const cleanUrl = request.uris[0].split("?")[0];
-      request.uris[0] = cleanUrl + "?" + activeCookie;
+       type === shaka.net.NetworkingEngine.RequestType.SEGMENT)){
+
+      request.uris[0] = request.uris[0].split("?")[0] + "?" + activeCookie;
     }
   });
 
-  /* 6 ─ Double loop: cookie rounds × stream URLs */
   const cookieRounds = [primaryCookie];
   if(fallbackCookie && fallbackCookie !== primaryCookie){
     cookieRounds.push(fallbackCookie);
@@ -286,32 +251,30 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   outer:
   for(let r = 0; r < cookieRounds.length; r++){
+
     activeCookie = cookieRounds[r];
-    const roundLabel = r === 0 ? "primary" : "fallback";
+    const label = r === 0 ? "primary" : "fallback";
 
     for(let i = 0; i < streamUrls.length; i++){
-      const url = streamUrls[i];
-      setStatus(`[${roundLabel}] Trying URL ${i + 1} of ${streamUrls.length}…`);
+
+      setStatus(`[${label}] Trying URL ${i+1}…`);
 
       try{
-        await player.load(url);
+        await player.load(streamUrls[i]);
         videoEl.play();
-        loaded = true;
-        setStatus("▶ Playing – " + channel.name);
-        break outer;
-      }catch(err){
-        console.warn(`[${roundLabel}] URL ${i + 1} failed:`, err);
-        setStatus(`[${roundLabel}] URL ${i + 1} failed, trying next…`, true);
-      }
-    }
 
-    if(!loaded && r < cookieRounds.length - 1){
-      setStatus("All URLs failed with primary cookie, retrying with fallback…", true);
+        setStatus("Playing ▶ " + channelData.name);
+        loaded = true;
+        break outer;
+
+      }catch(e){
+        setStatus(`[${label}] Failed URL ${i+1}`, true);
+      }
     }
   }
 
   if(!loaded){
-    setStatus("All stream URLs failed. Check DRM keys or cookie expiry.", true);
+    setStatus("All streams failed!", true);
   }
 
 });
